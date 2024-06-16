@@ -3,6 +3,7 @@ package com.example.chat.pages
 import android.util.Log
 import android.widget.ImageView
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,7 +54,15 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun HomePage(navController: NavController) {
-    val profile = remember { mutableStateOf(Account("", "", "https://cdn3.iconfinder.com/data/icons/seo-colored-flat-easy/128/Custom_user_profile_Account-512.png")) }
+    val profile = remember {
+        mutableStateOf(
+            Account(
+                "",
+                "",
+                "https://cdn3.iconfinder.com/data/icons/seo-colored-flat-easy/128/Custom_user_profile_Account-512.png"
+            )
+        )
+    }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -69,7 +78,8 @@ fun HomePage(navController: NavController) {
                         val document = documents.documents[0]
                         val userId = document.getString("userId") ?: ""
                         val username = document.getString("username") ?: ""
-                        val profileUrl = document.getString("profile") ?: "https://cdn3.iconfinder.com/data/icons/seo-colored-flat-easy/128/Custom_user_profile_Account-512.png"
+                        val profileUrl = document.getString("profile")
+                            ?: "https://cdn3.iconfinder.com/data/icons/seo-colored-flat-easy/128/Custom_user_profile_Account-512.png"
                         profile.value = Account(userId, username, profileUrl)
                     }
                 }
@@ -127,7 +137,11 @@ fun HomePage(navController: NavController) {
                             Icon(
                                 imageVector = Icons.Filled.Edit,
                                 contentDescription = "Edit",
-                                modifier = Modifier.size(32.dp),
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clickable {
+                                        navController.navigate("explore")
+                                    },
                                 colorResource(id = R.color.secondary)
                             )
                         }
@@ -160,7 +174,7 @@ fun HomePage(navController: NavController) {
 }
 
 @Composable
-fun DrawerContent(profile: MutableState<Account>,onCloseDrawer: () -> Unit) {
+fun DrawerContent(profile: MutableState<Account>, onCloseDrawer: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -174,7 +188,7 @@ fun DrawerContent(profile: MutableState<Account>,onCloseDrawer: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            AndroidView(modifier = Modifier.size(64.dp),factory = { context ->
+            AndroidView(modifier = Modifier.size(64.dp), factory = { context ->
                 ImageView(context).apply {
                     scaleType = ImageView.ScaleType.FIT_XY
                     Glide.with(context)

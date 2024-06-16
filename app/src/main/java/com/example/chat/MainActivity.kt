@@ -28,6 +28,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.chat.bottom_nav.BottomNavItem
+import com.example.chat.pages.ExplorePage
 import com.example.chat.pages.HomePage
 import com.example.chat.pages.LoginPage
 import com.example.chat.pages.MentionPage
@@ -72,6 +73,10 @@ fun NavigationController(navController: NavHostController) {
         
         composable("login"){
             LoginPage(navController = navController)
+        }
+
+        composable("explore"){
+            ExplorePage(navController = navController)
         }
     }
 
