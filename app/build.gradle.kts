@@ -68,6 +68,8 @@ dependencies {
     implementation(libs.material3)
     implementation(libs.material.icons.core)
     implementation(libs.firebase.analytics)
+    implementation (libs.glide)
+    annotationProcessor (libs.compiler)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
