@@ -35,6 +35,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -70,7 +71,7 @@ fun ChatPage(navController: NavController, userId: String) {
 
     val receiverId = FirebaseAuth.getInstance().currentUser?.uid
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(messages) {
         try {
             val query = ref
                 .whereEqualTo("user1", userId)
@@ -262,7 +263,7 @@ fun ChatPage(navController: NavController, userId: String) {
                         }
                     }
                 )
-                IconButton(onClick = { sendMessage(message, userId) }) {
+                IconButton(onClick = { sendMessage(message, userId,messages) }) {
                     Icon(imageVector = Icons.Default.Send, contentDescription = "Send Message")
                 }
             }
@@ -272,7 +273,7 @@ fun ChatPage(navController: NavController, userId: String) {
 }
 
 
-fun sendMessage(message: MutableState<TextFieldValue>, receiverId: String) {
+fun sendMessage(message: MutableState<TextFieldValue>, receiverId: String , messages:SnapshotStateList<Message>) {
     val userId = FirebaseAuth.getInstance().currentUser?.uid
     val ref = FirebaseFirestore.getInstance().collection("channels")
 
@@ -288,6 +289,7 @@ fun sendMessage(message: MutableState<TextFieldValue>, receiverId: String) {
                 val channelId = query.documents[0].id
                 Log.d("ChatPage", "Channel ID: $channelId")
                 addMessageToChannel(channelId, userId, message.value.text)
+                messages.add(Message(userId!!, message.value.text, getCurrentTime()))
                 message.value = TextFieldValue()
 
             } else {
@@ -302,6 +304,7 @@ fun sendMessage(message: MutableState<TextFieldValue>, receiverId: String) {
                     val channelId = reverseQuery.documents[0].id
                     Log.d("ChatPage", "Channel ID: $channelId")
                     addMessageToChannel(channelId, userId, message.value.text)
+                    messages.add(Message(userId!!, message.value.text, getCurrentTime()))
                     message.value = TextFieldValue()
                 } else {
                     val channel = hashMapOf(
@@ -311,12 +314,13 @@ fun sendMessage(message: MutableState<TextFieldValue>, receiverId: String) {
                             hashMapOf(
                                 "senderId" to userId,
                                 "message" to message.value.text,
-                                "time" to FieldValue.serverTimestamp()
+                                "time" to getCurrentTime()
                             )
                         )
                     )
                     ref.add(channel).addOnSuccessListener {
                         message.value = TextFieldValue()
+                        messages.add(Message(userId!!, message.value.text, getCurrentTime()))
                     }.addOnFailureListener {
 
                         Log.e("ChatPage", it.message.toString())
