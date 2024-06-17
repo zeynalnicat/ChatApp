@@ -28,6 +28,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.chat.bottom_nav.BottomNavItem
+import com.example.chat.pages.ChatPage
 import com.example.chat.pages.ExplorePage
 import com.example.chat.pages.HomePage
 import com.example.chat.pages.LoginPage
@@ -44,16 +45,24 @@ class MainActivity : ComponentActivity() {
         setContent {
             ChatTheme {
                 val navController = rememberNavController()
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = { if(firebaseAuth.currentUser!=null) BottomNavigationBar(navController = navController) }) { it
+                    bottomBar = { if (shouldShowBottomBar(currentRoute)) BottomNavigationBar(navController = navController) }
+                ) { it
                     NavigationController(navController = navController)
                 }
             }
         }
     }
-}
 
+    private fun shouldShowBottomBar(currentRoute: String?): Boolean {
+        val hiddenRoutes = listOf("register", "login", "chat", "explore")
+        return currentRoute !in hiddenRoutes
+    }
+}
 @Composable
 fun NavigationController(navController: NavHostController) {
     val firebaseAuth = FirebaseAuth.getInstance()
@@ -77,6 +86,10 @@ fun NavigationController(navController: NavHostController) {
 
         composable("explore"){
             ExplorePage(navController = navController)
+        }
+
+        composable("chat"){
+            ChatPage(navController = navController)
         }
     }
 

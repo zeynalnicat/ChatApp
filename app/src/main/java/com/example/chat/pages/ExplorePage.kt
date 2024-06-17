@@ -1,6 +1,7 @@
 package com.example.chat.pages
 
 import android.widget.ImageView
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -155,7 +156,10 @@ fun ExplorePage(navController: NavController) {
                 .padding(15.dp)) {
                 items(users.value.size) {
                     Column(
-                       verticalArrangement = Arrangement.spacedBy(10.dp)
+                       verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.clickable {
+                            navController.navigate("chat")
+                        }
                     ){
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
