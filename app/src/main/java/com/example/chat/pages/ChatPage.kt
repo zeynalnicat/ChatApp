@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,10 +37,12 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -54,6 +57,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -72,10 +76,10 @@ fun ChatPage(navController: NavController, userId: String) {
     val messages = remember { mutableStateListOf<Message>() }
 
     val receiverId = FirebaseAuth.getInstance().currentUser?.uid
+    val listenerRegistration = remember { mutableStateOf<ListenerRegistration?>(null) }
 
 
     LaunchedEffect(Unit) {
-
         val ref2 = FirebaseFirestore.getInstance().collection("channels")
 
         val query = ref.whereEqualTo("userId", userId).get()
@@ -91,12 +95,10 @@ fun ChatPage(navController: NavController, userId: String) {
 
                     Log.d("ChatPage", "User: $user")
                 }
-
             }
         }
 
         getMessages(ref2, userId, receiverId!!, messages)
-
     }
 
     Scaffold(
@@ -134,7 +136,6 @@ fun ChatPage(navController: NavController, userId: String) {
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(text = user.value.name, fontWeight = FontWeight.Bold)
-
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                         }
@@ -167,7 +168,6 @@ fun ChatPage(navController: NavController, userId: String) {
                     verticalArrangement = Arrangement.spacedBy(30.dp)
                 ) {
                     LazyColumn {
-                        Log.d("ChatPage", "Messages: $messages")
                         items(messages.size) {
                             if (messages[it].senderId == receiverId) {
                                 Row(
@@ -200,9 +200,7 @@ fun ChatPage(navController: NavController, userId: String) {
                                                 .padding(2.dp)
                                                 .align(Alignment.End)
                                         )
-
                                     }
-
                                 }
                             } else {
                                 Row(
@@ -240,7 +238,6 @@ fun ChatPage(navController: NavController, userId: String) {
                                                 color = Color.Black,
                                                 modifier = Modifier.padding(10.dp)
                                             )
-
                                         }
                                         Text(
                                             text = messages[it].time,
@@ -253,8 +250,6 @@ fun ChatPage(navController: NavController, userId: String) {
                         }
                     }
                 }
-
-
             }
 
             Row(
@@ -308,45 +303,45 @@ suspend fun getMessages(
     messages: SnapshotStateList<Message>
 ) {
     try {
-        val query = ref
+        val query1 = ref
             .whereEqualTo("user1", userId)
             .whereEqualTo("user2", receiverId)
-            .get()
-            .await()
 
         val query2 = ref
             .whereEqualTo("user1", receiverId)
             .whereEqualTo("user2", userId)
-            .get()
-            .await()
 
-        val channelDoc = query.documents.firstOrNull() ?: query2.documents.firstOrNull()
+        val combinedQuery = ref.whereIn("user1", listOf(userId, receiverId))
+            .whereIn("user2", listOf(userId, receiverId))
 
-        if (channelDoc != null) {
-            val datas = channelDoc["messages"] as? List<Map<String, Any>>
-            val messageList = datas?.map { data ->
-                Message(
-                    data["message"] as String,
-                    data["senderId"] as String,
-                    data["time"] as String
-                )
+        combinedQuery.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("ChatPage", "Error listening for messages: $error")
+                return@addSnapshotListener
             }
 
-            messageList?.let {
+            if (snapshot != null) {
+                val messageList = mutableListOf<Message>()
+                for (doc in snapshot.documents) {
+                    val datas = doc["messages"] as? List<Map<String, Any>>
+                    datas?.forEach { data ->
+                        val message = Message(
+                            data["message"] as String,
+                            data["senderId"] as String,
+                            data["time"] as String
+                        )
+                        messageList.add(message)
+                    }
+                }
                 messages.clear()
-                messages.addAll(it)
-                Log.d("ChatPage", "Messages loaded: $messages")
-            } ?: run {
-                messages.clear()
-                Log.d("ChatPage", "No messages found in channel document: $channelDoc")
+                messages.addAll(messageList)
+                Log.d("ChatPage", "Messages updated: $messages")
+            } else {
+                Log.d("ChatPage", "Current data: null")
             }
-        } else {
-            messages.clear()
-            Log.d("ChatPage", "No channel document found for users: $userId and $receiverId")
         }
     } catch (e: Exception) {
         Log.e("ChatPage", "Error fetching messages: ${e.message}", e)
-        e.printStackTrace()
     }
 }
 
