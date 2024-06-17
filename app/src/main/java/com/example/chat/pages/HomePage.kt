@@ -121,12 +121,14 @@ fun HomePage(navController: NavController) {
                             androidx.compose.material3.IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 AndroidView(factory = { context ->
                                     ImageView(context).apply {
-                                        scaleType = ImageView.ScaleType.FIT_XY
-                                        Glide.with(context)
+                                        scaleType = ImageView.ScaleType.FIT_XY }},
+                                    update = {imageView->
+                                        Glide.with(imageView.context)
                                             .load(profile.value.profile)
-                                            .into(this)
+                                            .into(imageView)
                                     }
-                                })
+
+                                )
                             }
                         }
 
@@ -191,11 +193,15 @@ fun DrawerContent(profile: MutableState<Account>, onCloseDrawer: () -> Unit) {
             AndroidView(modifier = Modifier.size(64.dp), factory = { context ->
                 ImageView(context).apply {
                     scaleType = ImageView.ScaleType.FIT_XY
-                    Glide.with(context)
-                        .load(profile.value.profile)
-                        .into(this)
                 }
-            })
+            },
+                update = { imageView ->
+
+                    Glide.with(imageView.context)
+                        .load(profile.value.profile)
+                        .into(imageView)
+                }
+            )
 
             Text(text = profile.value.name, fontSize = 20.sp, fontWeight = FontWeight(600))
 

@@ -59,8 +59,22 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun shouldShowBottomBar(currentRoute: String?): Boolean {
-        val hiddenRoutes = listOf("register", "login", "chat", "explore")
-        return currentRoute !in hiddenRoutes
+        if (currentRoute == null) return false
+
+        val hiddenRoutes = listOf("register", "login")
+        val dynamicHiddenRoutes = listOf("chat", "explore")
+
+        if (hiddenRoutes.contains(currentRoute)) {
+            return false
+        }
+
+        dynamicHiddenRoutes.forEach { route ->
+            if (currentRoute.startsWith(route)) {
+                return false
+            }
+        }
+
+        return true
     }
 }
 @Composable
@@ -85,11 +99,13 @@ fun NavigationController(navController: NavHostController) {
         }
 
         composable("explore"){
+
             ExplorePage(navController = navController)
         }
 
-        composable("chat"){
-            ChatPage(navController = navController)
+        composable("chat/{id}"){backstackEntry ->
+            val userId = backstackEntry.arguments?.getString("id") ?: ""
+            ChatPage(navController = navController,userId=userId)
         }
     }
 

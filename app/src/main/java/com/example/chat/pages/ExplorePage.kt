@@ -177,7 +177,7 @@ fun ExplorePage(navController: NavController) {
                     Column(
                        verticalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.clickable {
-                            navController.navigate("chat")
+                            navController.navigate("chat/${users.value[it].id}")
                         }
                     ){
                         Spacer(modifier = Modifier.height(4.dp))
@@ -187,13 +187,14 @@ fun ExplorePage(navController: NavController) {
                         ) {
                             AndroidView(modifier = Modifier.size(52.dp),factory = { context ->
                                 ImageView(context).apply {
-                                    scaleType = ImageView.ScaleType.FIT_XY
-                                    Glide.with(context)
+                                    scaleType = ImageView.ScaleType.FIT_XY} },
+                                update = {imageView->
+                                    Glide.with(imageView.context)
                                         .load(users.value[it].profile)
-                                        .into(this)
-
+                                        .into(imageView)
                                 }
-                            })
+
+                            )
 
                             Column(modifier = Modifier.fillMaxHeight()) {
                                 Text(text = users.value[it].name, fontWeight = FontWeight(600))
