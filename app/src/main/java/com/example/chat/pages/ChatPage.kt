@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -50,6 +51,7 @@ import com.example.chat.R
 import com.example.chat.models.Account
 import com.example.chat.models.Message
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -71,47 +73,11 @@ fun ChatPage(navController: NavController, userId: String) {
 
     val receiverId = FirebaseAuth.getInstance().currentUser?.uid
 
-    LaunchedEffect(messages) {
-        try {
-            val query = ref
-                .whereEqualTo("user1", userId)
-                .whereEqualTo("user2", receiverId)
-                .get()
-                .await()
-
-            val query2 = ref
-                .whereEqualTo("user1", receiverId)
-                .whereEqualTo("user2", userId)
-                .get()
-                .await()
-
-            val channelDoc = query.documents.firstOrNull() ?: query2.documents.firstOrNull()
-
-            if (channelDoc != null) {
-                val datas = channelDoc["messages"] as? List<Map<String, Any>>
-                val messageList = datas?.map { data ->
-                    Message(
-                        data["senderId"] as String,
-                        data["message"] as String,
-                        data["time"] as String
-                    )
-                }
-
-                messageList?.let {
-                    messages.clear()
-                    messages.addAll(it)
-                }
-            } else {
-
-                messages.clear()
-            }
-        } catch (e: Exception) {
-
-            e.printStackTrace()
-        }
-    }
 
     LaunchedEffect(Unit) {
+
+        val ref2 = FirebaseFirestore.getInstance().collection("channels")
+
         val query = ref.whereEqualTo("userId", userId).get()
         query.addOnSuccessListener { task ->
             if (task.documents.isNotEmpty()) {
@@ -128,6 +94,8 @@ fun ChatPage(navController: NavController, userId: String) {
 
             }
         }
+
+        getMessages(ref2, userId, receiverId!!, messages)
 
     }
 
@@ -194,38 +162,98 @@ fun ChatPage(navController: NavController, userId: String) {
                     .background(Color.White)
             ) {
 
-                LazyColumn {
-                    Log.d("ChatPage", "Messages: $messages")
-                    items(messages.size) {
-                        if (messages[it].senderId == receiverId) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(0.8f)
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(30.dp)
+                ) {
+                    LazyColumn {
+                        Log.d("ChatPage", "Messages: $messages")
+                        items(messages.size) {
+                            if (messages[it].senderId == receiverId) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    horizontalArrangement = Arrangement.End
                                 ) {
-                                    Card(
-                                        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+                                    Column(
                                         modifier = Modifier
-                                            .background(colorResource(id = R.color.smoke_txt))
+                                            .fillMaxWidth(0.8f)
+                                            .fillMaxHeight(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
+                                        Card(
+                                            modifier = Modifier
+                                                .align(Alignment.End),
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+                                        ) {
+                                            Text(
+                                                text = messages[it].string,
+                                                color = Color.Black,
+                                                modifier = Modifier.padding(10.dp)
+                                            )
+                                        }
                                         Text(
-                                            text = messages[it].string,
-                                            color = Color.Black
+                                            text = messages[it].time,
+                                            color = Color.Gray,
+                                            modifier = Modifier
+                                                .padding(2.dp)
+                                                .align(Alignment.End)
                                         )
+
                                     }
-                                    Text(
-                                        text = messages[it].time,
-                                        color = Color.Gray
-                                    )
 
                                 }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(0.8f).padding(20.dp),
 
+                                    horizontalArrangement = Arrangement.spacedBy(15.dp)
+                                ) {
+                                    Box(modifier = Modifier.align(Alignment.Bottom)) {
+                                        AndroidView(
+                                            modifier = Modifier.size(32.dp),
+                                            factory = { context ->
+                                                ImageView(context).apply {
+                                                    scaleType = ImageView.ScaleType.FIT_XY
+                                                }
+                                            },
+                                            update = { imageView ->
+                                                Glide.with(imageView.context)
+                                                    .load(user.value.profile)
+                                                    .into(imageView)
+                                            }
+                                        )
+                                    }
+
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Card(
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
+                                            modifier = Modifier
+                                                .background(colorResource(id = R.color.white))
+                                        ) {
+                                            Text(
+                                                text = messages[it].string,
+                                                color = Color.Black,
+                                                modifier = Modifier.padding(10.dp)
+                                            )
+
+                                        }
+                                        Text(
+                                            text = messages[it].time,
+                                            color = Color.Gray,
+                                            modifier = Modifier.padding(2.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
+
 
             }
 
@@ -263,7 +291,7 @@ fun ChatPage(navController: NavController, userId: String) {
                         }
                     }
                 )
-                IconButton(onClick = { sendMessage(message, userId,messages) }) {
+                IconButton(onClick = { sendMessage(message, userId, messages) }) {
                     Icon(imageVector = Icons.Default.Send, contentDescription = "Send Message")
                 }
             }
@@ -273,7 +301,61 @@ fun ChatPage(navController: NavController, userId: String) {
 }
 
 
-fun sendMessage(message: MutableState<TextFieldValue>, receiverId: String , messages:SnapshotStateList<Message>) {
+suspend fun getMessages(
+    ref: CollectionReference,
+    userId: String,
+    receiverId: String,
+    messages: SnapshotStateList<Message>
+) {
+    try {
+        val query = ref
+            .whereEqualTo("user1", userId)
+            .whereEqualTo("user2", receiverId)
+            .get()
+            .await()
+
+        val query2 = ref
+            .whereEqualTo("user1", receiverId)
+            .whereEqualTo("user2", userId)
+            .get()
+            .await()
+
+        val channelDoc = query.documents.firstOrNull() ?: query2.documents.firstOrNull()
+
+        if (channelDoc != null) {
+            val datas = channelDoc["messages"] as? List<Map<String, Any>>
+            val messageList = datas?.map { data ->
+                Message(
+                    data["message"] as String,
+                    data["senderId"] as String,
+                    data["time"] as String
+                )
+            }
+
+            messageList?.let {
+                messages.clear()
+                messages.addAll(it)
+                Log.d("ChatPage", "Messages loaded: $messages")
+            } ?: run {
+                messages.clear()
+                Log.d("ChatPage", "No messages found in channel document: $channelDoc")
+            }
+        } else {
+            messages.clear()
+            Log.d("ChatPage", "No channel document found for users: $userId and $receiverId")
+        }
+    } catch (e: Exception) {
+        Log.e("ChatPage", "Error fetching messages: ${e.message}", e)
+        e.printStackTrace()
+    }
+}
+
+
+fun sendMessage(
+    message: MutableState<TextFieldValue>,
+    receiverId: String,
+    messages: SnapshotStateList<Message>
+) {
     val userId = FirebaseAuth.getInstance().currentUser?.uid
     val ref = FirebaseFirestore.getInstance().collection("channels")
 
@@ -289,7 +371,7 @@ fun sendMessage(message: MutableState<TextFieldValue>, receiverId: String , mess
                 val channelId = query.documents[0].id
                 Log.d("ChatPage", "Channel ID: $channelId")
                 addMessageToChannel(channelId, userId, message.value.text)
-                messages.add(Message(userId!!, message.value.text, getCurrentTime()))
+                messages.add(Message(message.value.text,userId!! , getCurrentTime()))
                 message.value = TextFieldValue()
 
             } else {
@@ -304,7 +386,7 @@ fun sendMessage(message: MutableState<TextFieldValue>, receiverId: String , mess
                     val channelId = reverseQuery.documents[0].id
                     Log.d("ChatPage", "Channel ID: $channelId")
                     addMessageToChannel(channelId, userId, message.value.text)
-                    messages.add(Message(userId!!, message.value.text, getCurrentTime()))
+                    messages.add(Message(message.value.text,receiverId , getCurrentTime()))
                     message.value = TextFieldValue()
                 } else {
                     val channel = hashMapOf(
@@ -320,7 +402,7 @@ fun sendMessage(message: MutableState<TextFieldValue>, receiverId: String , mess
                     )
                     ref.add(channel).addOnSuccessListener {
                         message.value = TextFieldValue()
-                        messages.add(Message(userId!!, message.value.text, getCurrentTime()))
+                        messages.add(Message(message.value.text,userId!! , getCurrentTime()))
                     }.addOnFailureListener {
 
                         Log.e("ChatPage", it.message.toString())
