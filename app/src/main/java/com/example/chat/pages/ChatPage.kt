@@ -13,11 +13,14 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
@@ -43,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -72,12 +76,8 @@ fun ChatPage(navController: NavController, userId: String) {
     val ref = FirebaseFirestore.getInstance().collection("users")
     val user = remember { mutableStateOf(Account("", "", "")) }
     val message = remember { mutableStateOf(TextFieldValue()) }
-
     val messages = remember { mutableStateListOf<Message>() }
-
     val receiverId = FirebaseAuth.getInstance().currentUser?.uid
-    val listenerRegistration = remember { mutableStateOf<ListenerRegistration?>(null) }
-
 
     LaunchedEffect(Unit) {
         val ref2 = FirebaseFirestore.getInstance().collection("channels")
@@ -154,6 +154,7 @@ fun ChatPage(navController: NavController, userId: String) {
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
         ) {
 
             Box(
@@ -269,11 +270,13 @@ fun ChatPage(navController: NavController, userId: String) {
                     modifier = Modifier
                         .weight(1f)
                         .padding(8.dp)
+                        .navigationBarsPadding()
                         .background(
                             Color(0xFFF1F1F1),
                             shape = androidx.compose.foundation.shape.CircleShape
                         )
                         .padding(horizontal = 16.dp, vertical = 8.dp),
+
                     decorationBox = { innerTextField ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -286,7 +289,7 @@ fun ChatPage(navController: NavController, userId: String) {
                         }
                     }
                 )
-                IconButton(onClick = { sendMessage(message, userId, messages) }) {
+                IconButton(onClick = { sendMessage(message, userId, messages)  }) {
                     Icon(imageVector = Icons.Default.Send, contentDescription = "Send Message")
                 }
             }
@@ -294,7 +297,6 @@ fun ChatPage(navController: NavController, userId: String) {
         }
     }
 }
-
 
 suspend fun getMessages(
     ref: CollectionReference,
