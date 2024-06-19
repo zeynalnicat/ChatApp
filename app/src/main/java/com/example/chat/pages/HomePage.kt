@@ -2,10 +2,8 @@ package com.example.chat.pages
 
 import android.util.Log
 import android.widget.ImageView
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Divider
 import androidx.compose.material.DrawerValue
 import androidx.compose.material.ModalDrawer
 import androidx.compose.material.Text
@@ -23,7 +24,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.MarkUnreadChatAlt
 import androidx.compose.material.rememberDrawerState
-import androidx.compose.material3.AlertDialogDefaults.shape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -31,29 +31,48 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import com.bumptech.glide.Glide
 import com.example.chat.R
+import com.example.chat.components.Loading
 import com.example.chat.components.RoundedCornerCard
 import com.example.chat.models.Account
+import com.example.chat.models.Chat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @Composable
 fun HomePage(navController: NavController) {
+    val chats = remember {
+        mutableStateListOf<Chat>()
+    }
+    val isLoading = remember {
+        mutableStateOf(false)
+    }
+
+    val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+
     val profile = remember {
         mutableStateOf(
             Account(
@@ -63,6 +82,12 @@ fun HomePage(navController: NavController) {
             )
         )
     }
+
+    LaunchedEffect(Unit) {
+        isLoading.value = true
+        getChats(userId!!, chats, isLoading)
+    }
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -92,7 +117,7 @@ fun HomePage(navController: NavController) {
     ModalDrawer(
         drawerState = drawerState,
         drawerContent = {
-            DrawerContent(profile) { scope.launch { drawerState.close() } }
+            DrawerContent(profile,navController) { scope.launch { drawerState.close() } }
         }
     ) {
         Scaffold(
@@ -101,7 +126,7 @@ fun HomePage(navController: NavController) {
                 .padding(10.dp),
 
             ) { padding ->
-            Box(
+            Column(
                 modifier = Modifier.padding(padding)
             ) {
                 Card(
@@ -121,8 +146,10 @@ fun HomePage(navController: NavController) {
                             androidx.compose.material3.IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 AndroidView(factory = { context ->
                                     ImageView(context).apply {
-                                        scaleType = ImageView.ScaleType.FIT_XY }},
-                                    update = {imageView->
+                                        scaleType = ImageView.ScaleType.FIT_XY
+                                    }
+                                },
+                                    update = { imageView ->
                                         Glide.with(imageView.context)
                                             .load(profile.value.profile)
                                             .into(imageView)
@@ -150,33 +177,119 @@ fun HomePage(navController: NavController) {
                     }
                 }
 
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.MarkUnreadChatAlt,
-                        contentDescription = "Chat",
-                        modifier = Modifier.size(100.dp),
-                        tint = Color.Gray
-                    )
+                Spacer(modifier = Modifier.height(30.dp))
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Text(
-                        text = "Let's start chatting!",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                if (isLoading.value) {
+                    Loading()
+                } else if (chats.isEmpty() && !isLoading.value) {
+                    NoChat()
+                } else {
+                    ChatList(chats, navController)
                 }
+
             }
         }
     }
 }
 
 @Composable
-fun DrawerContent(profile: MutableState<Account>, onCloseDrawer: () -> Unit) {
+fun ChatList(chats: SnapshotStateList<Chat>, navController: NavController) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(5.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        LazyColumn {
+            items(chats) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.clickable {
+                            navController.navigate("chat/${it.personId}")
+                        }
+                    ) {
+                        AndroidView(modifier = Modifier.size(52.dp), factory = { context ->
+                            ImageView(context).apply {
+                                scaleType = ImageView.ScaleType.FIT_XY
+
+                            }
+                        },
+                            update = { imageView ->
+                                Glide.with(imageView.context)
+                                    .load(it.profile)
+                                    .into(imageView)
+                            })
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = it.person,
+                                style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight(600)),
+                            )
+
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = if (it.isSender) "You: ${it.lastMessage}" else it.lastMessage,
+                                    color = colorResource(id = R.color.smoke_txt),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(text = it.time, color = colorResource(id = R.color.smoke_txt))
+                            }
+                        }
+                    }
+
+                    Divider(thickness = 0.5.dp, color = colorResource(id = R.color.smoke_txt))
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+            }
+        }
+
+    }
+}
+
+
+@Composable
+fun NoChat() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.MarkUnreadChatAlt,
+            contentDescription = "Chat",
+            modifier = Modifier.size(100.dp),
+            tint = Color.Gray
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Let's start chatting!",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+fun DrawerContent(
+    profile: MutableState<Account>,
+    navController: NavController,
+    onCloseDrawer: () -> Unit,
+
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -210,13 +323,17 @@ fun DrawerContent(profile: MutableState<Account>, onCloseDrawer: () -> Unit) {
         Spacer(modifier = Modifier.height(20.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    navController.navigate("explore")
+                },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Icon(
                 imageVector = Icons.Filled.Edit,
-                contentDescription = "Person",
+                contentDescription = "Edit",
                 modifier = Modifier
                     .size(25.dp)
                     .clip(CircleShape),
@@ -227,6 +344,7 @@ fun DrawerContent(profile: MutableState<Account>, onCloseDrawer: () -> Unit) {
             Text(text = "New Direct Message")
 
         }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -246,4 +364,58 @@ fun DrawerContent(profile: MutableState<Account>, onCloseDrawer: () -> Unit) {
 
         }
     }
+}
+
+fun getChats(userId: String, chats: SnapshotStateList<Chat>, isLoading: MutableState<Boolean>) {
+    val ref = FirebaseFirestore.getInstance().collection("channels")
+
+    CoroutineScope(Dispatchers.IO).launch {
+        val query = ref.whereEqualTo("user1", userId).get().await()
+        val query2 = ref.whereEqualTo("user2", userId).get().await()
+
+        if (query.documents.isNotEmpty()) {
+            for (doc in query.documents) {
+                val user2 = doc.get("user2") as String
+                val mp = getOtherUser(user2)
+                val profile = mp.get("profile") as String
+                val messages = doc.get("messages") as List<Map<String, Any>>
+                val lastMessage = messages.last().get("message") as String
+                val sender = messages.last().get("senderId") as String
+                val name = mp.get("username") as String
+                val time = messages.last().get("time") as String
+                val chat = Chat(user2, name, profile, lastMessage, time, userId == sender)
+                chats.add(chat)
+            }
+        }
+
+        if (query2.documents.isNotEmpty()) {
+            for (doc in query2.documents) {
+                val user2 = doc.get("user1") as String
+                val mp = getOtherUser(user2)
+                val profile = mp.get("profile") as String
+                val messages = doc.get("messages") as List<Map<String, Any>>
+                val lastMessage = messages.last().get("message") as String
+                val sender = messages.last().get("senderId") as String
+                val name = mp.get("username") as String
+                val time = messages.last().get("time") as String
+                val chat = Chat(user2, name, profile, lastMessage, time, userId == sender)
+                chats.add(chat)
+            }
+        }
+
+        isLoading.value = false
+    }
+}
+
+
+suspend fun getOtherUser(userId: String): Map<String, Any> {
+    val ref = FirebaseFirestore.getInstance().collection("users")
+    val query = ref.whereEqualTo("userId", userId).get().await()
+
+    if (query.documents.isNotEmpty()) {
+        return query.documents[0].data!!
+    }
+
+    return mapOf()
+
 }

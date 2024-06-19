@@ -305,14 +305,6 @@ suspend fun getMessages(
     messages: SnapshotStateList<Message>
 ) {
     try {
-        val query1 = ref
-            .whereEqualTo("user1", userId)
-            .whereEqualTo("user2", receiverId)
-
-        val query2 = ref
-            .whereEqualTo("user1", receiverId)
-            .whereEqualTo("user2", userId)
-
         val combinedQuery = ref.whereIn("user1", listOf(userId, receiverId))
             .whereIn("user2", listOf(userId, receiverId))
 

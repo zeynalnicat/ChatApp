@@ -31,6 +31,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -46,7 +47,9 @@ import com.bumptech.glide.Glide
 import com.example.chat.R
 import com.example.chat.models.Account
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 
 
@@ -57,6 +60,10 @@ fun ExplorePage(navController: NavController) {
         mutableStateOf("")
     }
 
+//    val temp = remember {
+//        mutableStateOf(listOf<Account>())
+//    }
+
     val userId = FirebaseAuth.getInstance().currentUser?.uid
     val ref = FirebaseFirestore.getInstance().collection("users")
 
@@ -65,45 +72,28 @@ fun ExplorePage(navController: NavController) {
     }
 
 
-    LaunchedEffect(search.value) {
-        val searchText = search.value.lowercase().trim()
-        val query = ref.whereNotEqualTo("userId", userId)
-            .orderBy("usernameLowercase")
-            .startAt(searchText)
-            .endAt("$searchText\uf8ff")
-
-        try {
-            val task = query.get().await()
-            if (task.documents.isNotEmpty()) {
-                users.value = task.documents.map {
-                    Account(
-                        it.getString("userId") ?: "",
-                        it.getString("username") ?: "",
-                        it.getString("profile") ?: ""
-                    )
-                }
-            } else {
-                users.value = emptyList()
-            }
-        } catch (e: Exception) {
-
-        }
+    LaunchedEffect(search.value)
+        {
+//        try {
+//            if (search.value.isEmpty()) {
+//                getUsers(ref = ref, userId = userId, users = users)
+//                temp.value = users.value
+//            } else {
+//                val searchText = search.value.lowercase().trim()
+//                val searchedList = temp.value.filter { it.name.lowercase().contains(searchText) }
+//                users.value = searchedList
+//
+//
+//            }
+//        } catch (e: Exception) {
+//            e.printStackTrace()
+//        }
     }
 
-    LaunchedEffect(Unit) {
-        val query = ref.whereNotEqualTo("userId", userId)
 
-        query.get().addOnSuccessListener { task ->
-            if (task.documents.isNotEmpty()) {
-                users.value = task.documents.map {
-                    Account(
-                        it.get("userId") as String,
-                        it.get("username") as String,
-                        it.get("profile") as String
-                    )
-                }
-            }
-        }
+    LaunchedEffect(Unit) {
+        getUsers(ref = ref, userId = userId, users = users)
+//        temp.value = users.value
     }
 
     Scaffold(
@@ -215,5 +205,25 @@ fun ExplorePage(navController: NavController) {
             }
         }
 
+    }
+}
+
+private fun getUsers(
+    ref: CollectionReference,
+    userId: String?,
+    users: MutableState<List<Account>>
+) {
+    val query = ref.whereNotEqualTo("userId", userId)
+
+    query.get().addOnSuccessListener { task ->
+        if (task.documents.isNotEmpty()) {
+            users.value = task.documents.map {
+                Account(
+                    it.get("userId") as String,
+                    it.get("username") as String,
+                    it.get("profile") as String
+                )
+            }
+        }
     }
 }

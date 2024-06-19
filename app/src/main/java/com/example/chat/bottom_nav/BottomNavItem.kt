@@ -7,6 +7,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
     object Home : BottomNavItem("home", Icons.Outlined.Chat, "Chats")
-    object Mention : BottomNavItem("mentions",Icons.Outlined.Tag, "Mentions")
+    object Mention : BottomNavItem("mentions",Icons.Outlined.Tag, "Groups")
 
 }
