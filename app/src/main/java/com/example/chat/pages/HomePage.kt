@@ -396,40 +396,48 @@ fun getChats(userId: String, chats: SnapshotStateList<Chat>, isLoading: MutableS
     val ref = FirebaseFirestore.getInstance().collection("channels")
 
     CoroutineScope(Dispatchers.IO).launch {
-        val query = ref.whereEqualTo("user1", userId).get().await()
-        val query2 = ref.whereEqualTo("user2", userId).get().await()
+        try {
+            val query = ref.whereEqualTo("user1", userId).get().await()
+            val query2 = ref.whereEqualTo("user2", userId).get().await()
 
-        if (query.documents.isNotEmpty()) {
-            for (doc in query.documents) {
-                val user2 = doc.get("user2") as String
-                val mp = getOtherUser(user2)
-                val profile = mp.get("profile") as String
-                val messages = doc.get("messages") as List<Map<String, Any>>
-                val lastMessage = messages.last().get("message") as String
-                val sender = messages.last().get("senderId") as String
-                val name = mp.get("username") as String
-                val time = messages.last().get("time") as String
-                val chat = Chat(user2, name, profile, lastMessage, time, userId == sender)
-                chats.add(chat)
+            if (query.documents.isNotEmpty()) {
+                for (doc in query.documents) {
+                    val user2 = doc.getString("user2") ?: continue
+                    val mp = getOtherUser(user2)
+                    val profile = mp["profile"] as? String ?: ""
+                    val messages = doc.get("messages") as? List<Map<String, Any>> ?: emptyList()
+                    if (messages.isNotEmpty()) {
+                        val lastMessage = messages.last()["message"] as? String ?: ""
+                        val sender = messages.last()["senderId"] as? String ?: ""
+                        val name = mp["username"] as? String ?: ""
+                        val time = messages.last()["time"] as? String ?: ""
+                        val chat = Chat(user2, name, profile, lastMessage, time, userId == sender)
+                        chats.add(chat)
+                    }
+                }
             }
-        }
 
-        if (query2.documents.isNotEmpty()) {
-            for (doc in query2.documents) {
-                val user2 = doc.get("user1") as String
-                val mp = getOtherUser(user2)
-                val profile = mp.get("profile") as String
-                val messages = doc.get("messages") as List<Map<String, Any>>
-                val lastMessage = messages.last().get("message") as String
-                val sender = messages.last().get("senderId") as String
-                val name = mp.get("username") as String
-                val time = messages.last().get("time") as String
-                val chat = Chat(user2, name, profile, lastMessage, time, userId == sender)
-                chats.add(chat)
+            if (query2.documents.isNotEmpty()) {
+                for (doc in query2.documents) {
+                    val user2 = doc.getString("user1") ?: continue
+                    val mp = getOtherUser(user2)
+                    val profile = mp["profile"] as? String ?: ""
+                    val messages = doc.get("messages") as? List<Map<String, Any>> ?: emptyList()
+                    if (messages.isNotEmpty()) {
+                        val lastMessage = messages.last()["message"] as? String ?: ""
+                        val sender = messages.last()["senderId"] as? String ?: ""
+                        val name = mp["username"] as? String ?: ""
+                        val time = messages.last()["time"] as? String ?: ""
+                        val chat = Chat(user2, name, profile, lastMessage, time, userId == sender)
+                        chats.add(chat)
+                    }
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            isLoading.value = false
         }
-
-        isLoading.value = false
     }
 }
 
