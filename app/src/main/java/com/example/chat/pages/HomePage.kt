@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Divider
 import androidx.compose.material.DrawerValue
 import androidx.compose.material.ModalDrawer
@@ -24,6 +25,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.MarkUnreadChatAlt
 import androidx.compose.material.rememberDrawerState
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -295,74 +298,97 @@ fun DrawerContent(
             .fillMaxSize()
             .padding(32.dp),
 
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            AndroidView(modifier = Modifier.size(64.dp), factory = { context ->
-                ImageView(context).apply {
-                    scaleType = ImageView.ScaleType.FIT_XY
-                }
-            },
-                update = { imageView ->
 
-                    Glide.with(imageView.context)
-                        .load(profile.value.profile)
-                        .into(imageView)
-                }
-            )
-
-            Text(text = profile.value.name, fontSize = 20.sp, fontWeight = FontWeight(600))
-
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    navController.navigate("explore")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                AndroidView(modifier = Modifier.size(64.dp), factory = { context ->
+                    ImageView(context).apply {
+                        scaleType = ImageView.ScaleType.FIT_XY
+                    }
                 },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Edit,
-                contentDescription = "Edit",
+                    update = { imageView ->
+
+                        Glide.with(imageView.context)
+                            .load(profile.value.profile)
+                            .into(imageView)
+                    }
+                )
+
+                Text(text = profile.value.name, fontSize = 20.sp, fontWeight = FontWeight(600))
+
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
                 modifier = Modifier
-                    .size(25.dp)
-                    .clip(CircleShape),
-                Color.Gray
+                    .fillMaxWidth()
+                    .clickable {
+                        navController.navigate("explore")
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Edit,
+                    contentDescription = "Edit",
+                    modifier = Modifier
+                        .size(25.dp)
+                        .clip(CircleShape),
+                    Color.Gray
 
-            )
+                )
 
-            Text(text = "New Direct Message")
+                Text(text = "New Direct Message")
 
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = "Person",
+                    modifier = Modifier
+                        .size(25.dp)
+                        .clip(CircleShape),
+                    Color.Gray
+
+                )
+
+                Text(text = "New Group")
+            }
+
+            Button(
+                onClick = { logOut(navController) },
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = colorResource(
+                        id = R.color.secondary
+                    )
+                )
+            ) {
+                androidx.compose.material3.Text(text = "Log Out", color = Color.White)
+            }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Person,
-                contentDescription = "Person",
-                modifier = Modifier
-                    .size(25.dp)
-                    .clip(CircleShape),
-                Color.Gray
 
-            )
 
-            Text(text = "New Group")
-
-        }
     }
 }
 
@@ -418,4 +444,9 @@ suspend fun getOtherUser(userId: String): Map<String, Any> {
 
     return mapOf()
 
+}
+
+fun logOut(navController: NavController) {
+    val auth = FirebaseAuth.getInstance().signOut()
+    navController.navigate("register"){popUpTo("register"){inclusive=true} }
 }
