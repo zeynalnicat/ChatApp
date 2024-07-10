@@ -196,7 +196,7 @@ fun UserRow(
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier.clickable {
-            if (!isGroup) {
+            if (isGroup) {
                 val newCheckedState = !isChecked
                 onCheckedChange(newCheckedState)
             } else {
@@ -231,7 +231,7 @@ fun UserRow(
                 }
             }
 
-            if (!isGroup) {
+            if (isGroup) {
                 Checkbox(
                     checked = isChecked,
                     onCheckedChange = { onCheckedChange(it) }
