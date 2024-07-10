@@ -98,9 +98,9 @@ fun NavigationController(navController: NavHostController) {
             LoginPage(navController = navController)
         }
 
-        composable("explore"){
-
-            ExplorePage(navController = navController)
+        composable("explore/{isGroup}"){backstackEntry ->
+            val isGroup = backstackEntry.arguments?.getBoolean("isGroup") ?: false
+            ExplorePage(navController = navController,isGroup=isGroup)
         }
 
         composable("chat/{id}"){backstackEntry ->

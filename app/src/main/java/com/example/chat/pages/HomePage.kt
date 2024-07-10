@@ -172,7 +172,7 @@ fun HomePage(navController: NavController) {
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clickable {
-                                        navController.navigate("explore")
+                                        navController.navigate("explore/${false}")
                                     },
                                 colorResource(id = R.color.secondary)
                             )
@@ -334,7 +334,7 @@ fun DrawerContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        navController.navigate("explore")
+                        navController.navigate("explore/${false}")
                     },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
